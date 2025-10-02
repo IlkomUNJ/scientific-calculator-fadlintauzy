@@ -7,7 +7,6 @@ import kotlin.math.*
 class Calc {
     private var currExpression: String = "0"
 
-    // --- Konstanta untuk Keterbacaan ---
     private val BINARY_OPERATORS = listOf("+", "-", "x", "/", "^")
     private val ALL_TRIG_FUNCTIONS = listOf("sin", "cos", "tan", "asin", "acos", "atan")
     private val OTHER_FUNCTIONS = listOf("log", "ln", "sqrt")
@@ -17,7 +16,6 @@ class Calc {
             currExpression = "0"
         }
 
-        // Perkalian Implisit: Angka setelah kurung tutup
         if (currExpression.endsWith(')')) {
             currExpression += "x"
         }
@@ -33,9 +31,7 @@ class Calc {
         }
     }
 
-    /**
-     * Handles inputs for mathematical constants, like 'e'.
-     */
+
     fun onConstant(constant: String) {
         if (currExpression == "Error") {
             currExpression = "0"
@@ -65,23 +61,20 @@ class Calc {
         when (operator) {
             in BINARY_OPERATORS -> {
 
-                // *** PENCEGAHAN BARU: Jika karakter terakhir adalah '(', hanya izinkan '-' ***
                 if (lastChar == "(") {
                     if (operator != "-") {
-                        return // Abaikan semua operator biner selain '-'
+                        return
                     }
                 }
 
-                // KONDISI MUTLAK: MENCEGAH OPERATOR BERURUTAN (TIDAK ADA PENGGANTIAN)
                 if (isLastCharOperator) {
                     if (operator == "-" && lastChar != "-") {
-                        // Lanjutkan ke KASUS UNARY MINUS
+
                     } else {
                         return
                     }
                 }
 
-                // --- KASUS 1: Unary Minus (-) ---
                 if (operator == "-") {
                     if (currExpression == "0") {
                         currExpression = "-"
@@ -98,17 +91,13 @@ class Calc {
                 }
 
 
-                // --- KASUS 2: TAMBAHKAN OPERATOR BINER BARU ---
                 currExpression += operator
             }
 
-            // BLOK KURUNG DIHAPUS, karena input kurung hanya datang dari onScientificFunction
         }
     }
 
-    /**
-     * Applies a scientific function.
-     */
+
     fun onScientificFunction(function: String) {
         if (currExpression == "Error") {
             currExpression = "0"
@@ -122,19 +111,15 @@ class Calc {
         }
 
         if (internalFunction == "!" || internalFunction == "%" || internalFunction == "1/x") {
-            // PERBAIKAN POSTFIX: Ganti operand terakhir dengan notasi fungsi, TUNDA EVALUASI
             try {
-                // 1. Dapatkan semua token
                 val allTokens = tokenize(currExpression)
 
-                // 2. Cek apakah token terakhir adalah angka tunggal
                 if (allTokens.isEmpty() || allTokens.last().toDoubleOrNull() == null) {
                     throw IllegalArgumentException("Operand missing or not a single number.")
                 }
 
                 val operandString = allTokens.last()
 
-                // 3. Tentukan notasi postfix baru
                 val newPostfixNotation = when (internalFunction) {
                     "!" -> "$operandString!"
                     "%" -> "$operandString%"
@@ -142,7 +127,6 @@ class Calc {
                     else -> ""
                 }
 
-                // 4. Ganti operand terakhir di currExpression dengan notasi baru
                 val newExpression = currExpression.dropLast(operandString.length) + newPostfixNotation
 
                 currExpression = newExpression
@@ -150,11 +134,11 @@ class Calc {
             } catch (e: Exception) {
                 currExpression = "Error"
             }
+
         } else {
             val lastChar = currExpression.lastOrNull()?.toString()
 
-            // Perkalian implisit
-            if (currExpression != "0" && lastChar !in BINARY_OPERATORS && lastChar != "(") {
+            if (currExpression != "0" && lastChar !in BINARY_OPERATORS ) {
                 currExpression += "x"
             }
 
@@ -172,7 +156,6 @@ class Calc {
         try {
             var expressionToEvaluate = currExpression
 
-            // Tambahkan kurung tutup yang hilang
             val openParenCount = expressionToEvaluate.count { it == '(' }
             val closeParenCount = expressionToEvaluate.count { it == ')' }
 
@@ -214,11 +197,8 @@ class Calc {
         return token in ALL_TRIG_FUNCTIONS || token in OTHER_FUNCTIONS
     }
 
-    private fun isExpressionCurrentNumber(): Boolean {
-        return currExpression.toDoubleOrNull() != null
-    }
 
-    // --- Implementasi Kalkulator ---
+
 
     private fun evaluateExpression(expression: String): Double {
         val tokens = tokenize(expression)
@@ -226,9 +206,7 @@ class Calc {
         return evaluateRPN(rpnTokens)
     }
 
-    /**
-     * Splits the expression string into a list of numbers, operators, and parentheses.
-     */
+
     private fun tokenize(expression: String): List<String> {
         val tokens = mutableListOf<String>()
         var i = 0
@@ -251,14 +229,11 @@ class Calc {
                     }
                     tokens.add(functionBuffer)
                 }
-                // Handle Unary Minus: jika di awal, atau setelah operator biner/kurung buka
                 char == '-' && (i == 0 || expression[i - 1].toString() in (BINARY_OPERATORS + listOf("("))) -> {
 
-                    // PERBAIKAN: Menangani -fungsi atau -kurung sebagai -1 x
                     val nextCharIndex = i + 1
                     var isNextCharFunction = false
 
-                    // Cek apakah diikuti oleh fungsi
                     for (func in ALL_TRIG_FUNCTIONS + OTHER_FUNCTIONS) {
                         if (expression.length > nextCharIndex && expression.substring(nextCharIndex).startsWith(func)) {
                             isNextCharFunction = true
@@ -266,16 +241,13 @@ class Calc {
                         }
                     }
 
-                    // Cek apakah diikuti oleh kurung buka
                     val isNextCharParen = nextCharIndex < expression.length && expression[nextCharIndex] == '('
 
                     if (isNextCharFunction || isNextCharParen) {
-                        // Ubah menjadi -1 x
                         tokens.add("-1")
                         tokens.add("x")
                         i++
                     } else {
-                        // KASUS LAMA: Mengkonsumsi angka
                         var numberBuffer = "-"
                         i++
                         while (i < expression.length && (expression[i].isDigit() || expression[i] == '.')) {
@@ -285,7 +257,6 @@ class Calc {
                         tokens.add(numberBuffer)
                     }
                 }
-                // *** PERBAIKAN: Mengisolasi 1/x, %, ! sebagai token operator single-character/string
                 char == '!' -> {
                     tokens.add("!")
                     i++
@@ -308,9 +279,7 @@ class Calc {
         return tokens.filter { it.isNotBlank() }
     }
 
-    /**
-     * Converts an infix token list to a postfix (RPN) list using the shunting-yard algorithm.
-     */
+
     private fun shuntingYard(tokens: List<String>): List<String> {
         val outputQueue = mutableListOf<String>()
         val operatorStack = Stack<String>()
@@ -343,17 +312,14 @@ class Calc {
                     while (operatorStack.isNotEmpty()) {
                         val stackPeek = operatorStack.peek()
 
-                        // KONDISI 1: Jika melihat Fungsi, pop fungsi tersebut (Preseden tertinggi)
-                        // Fungsi harus diproses ke output sebelum operator biner yang datang.
+
                         if (isFunction(stackPeek)) {
                             outputQueue.add(operatorStack.pop())
-                            continue // Lanjutkan loop untuk memproses operator di bawahnya
+                            continue
                         }
 
-                        // Kurung buka menghentikan pop
                         if (stackPeek == "(") break
 
-                        // Lakukan pop operator biner jika presedennya lebih tinggi atau sama
                         if (isOperator(stackPeek) && getPrecedence(stackPeek) >= getPrecedence(token)) {
                             outputQueue.add(operatorStack.pop())
                         } else {
@@ -371,9 +337,7 @@ class Calc {
         return outputQueue
     }
 
-    /**
-     * Evaluates a postfix (RPN) expression.
-     */
+
     private fun evaluateRPN(tokens: List<String>): Double {
         val stack = Stack<Double>()
         for (token in tokens) {
@@ -407,9 +371,7 @@ class Calc {
         return stack.pop()
     }
 
-    /**
-     * Defines the precedence of each operator.
-     */
+
     private fun getPrecedence(op: String): Int {
         return when {
             isFunction(op) -> 4
@@ -425,9 +387,7 @@ class Calc {
     private fun Double.radiansToDeg(): Double = this * 180 / PI
 
 
-    /**
-     * Performs a standard binary calculation based on the given operator.
-     */
+
     private fun performCalculation(operand1: Double, operand2: Double, operator: String): Double {
         return when (operator) {
             "+" -> operand1 + operand2
@@ -439,9 +399,7 @@ class Calc {
         }
     }
 
-    /**
-     * Performs a scientific calculation (unary operation).
-     */
+
     private fun performScientificCalculation(operand: Double, operator: String): Double {
         return when (operator) {
             // Trigonometric
@@ -465,16 +423,12 @@ class Calc {
         }
     }
 
-    /**
-     * Helper function to calculate the factorial of a number.
-     */
+
     private fun factorial(n: Double): Double {
-        // PERBAIKAN: Batasi faktorial untuk mencegah overflow Double
         if (n < 0 || n != n.toInt().toDouble()) return Double.NaN
 
         val nInt = n.toInt()
 
-        // Batas aman (170! adalah maksimum sebelum menjadi Infinity)
         if (nInt > 170) return Double.POSITIVE_INFINITY
 
         if (nInt == 0) return 1.0
@@ -486,9 +440,7 @@ class Calc {
         return result
     }
 
-    /**
-     * Formats a double to a string, removing the ".0" for whole numbers.
-     */
+
     private fun formatNumber(number: Double?): String {
         if (number == null || number.isNaN() || number.isInfinite()) return "Error"
 
