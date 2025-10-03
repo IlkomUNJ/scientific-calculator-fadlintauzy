@@ -1,5 +1,8 @@
+[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/ukXkuQi0)
 # ScientificApplication
-This is blank template with the exception of this readme. You are free to push anything to this repo that are related to the homework. 
+Name : Fadlintauzy Wilman Putra(1313623068)
+
+For this assingment i use Gemini AI to help me build basic calculator and  with some error handling like trimming and unary minus.
 
 For qualifying for a full grade you just need:
 - Fully working basic calculator: +, -, *, /
