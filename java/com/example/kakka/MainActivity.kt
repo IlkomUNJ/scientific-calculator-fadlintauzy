@@ -38,12 +38,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 @Composable
 fun SetupLayout() {
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.Black // Latar belakang hitam
+        color = Color.Black
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -72,7 +71,6 @@ fun SetupLayout() {
                 )
             }
 
-            // Keypad Area
             CalculatorKeypad(
                 calc = calc,
                 isSciMode = isSciMode,
@@ -93,7 +91,6 @@ fun CalculatorKeypad(
     val specialColor = Color(0xFFFF9800)
     val digitColor = Color(0xFF333333)
 
-    // Helper function to handle operator logic
     fun getOperatorAction(buttonText: String): () -> Unit {
         val operatorToSend = when (buttonText) {
             "x" -> "x"
@@ -106,14 +103,12 @@ fun CalculatorKeypad(
             onDisplayUpdate()
         }
     }
-
     fun getDigitAction(buttonText: String): () -> Unit {
         return {
             calc.onDigit(buttonText)
             onDisplayUpdate()
         }
     }
-
     fun getScientificAction(buttonText: String): () -> Unit {
         return {
             calc.onScientificFunction(buttonText)
@@ -214,7 +209,6 @@ fun BaseCalcButton(
             .padding(4.dp),
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
-        // GUNAKAN parameter 'background' di sini
         colors = ButtonDefaults.buttonColors(containerColor = background),
         contentPadding = PaddingValues(0.dp),
         content = content

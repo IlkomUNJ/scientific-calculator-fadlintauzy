@@ -6,20 +6,17 @@ import kotlin.math.*
 
 class Calc {
     private var currExpression: String = "0"
-
-    private val BINARY_OPERATORS = listOf("+", "-", "x", "/", "^")
-    private val ALL_TRIG_FUNCTIONS = listOf("sin", "cos", "tan", "asin", "acos", "atan")
-    private val OTHER_FUNCTIONS = listOf("log", "ln", "sqrt")
+    private val binaryOperation = listOf("+", "-", "x", "/", "^")
+    private val trigFunction = listOf("sin", "cos", "tan", "asin", "acos", "atan")
+    private val otherFunction = listOf("log", "ln", "sqrt")
 
     fun onDigit(digit: String) {
         if (currExpression == "Error") {
             currExpression = "0"
         }
-
         if (currExpression.endsWith(')')) {
             currExpression += "x"
         }
-
         if (currExpression == "0" && digit != ".") {
             currExpression = digit
         }
@@ -31,46 +28,19 @@ class Calc {
         }
     }
 
-
-    fun onConstant(constant: String) {
-        if (currExpression == "Error") {
-            currExpression = "0"
-        }
-
-        if (currExpression != "0" && !isOperator(currExpression.last().toString()) && currExpression.last() != '(') {
-            currExpression += "x"
-        }
-
-        currExpression = when(constant) {
-            "e" -> currExpression.replace("e", E.toString())
-            else -> currExpression
-        }
-        if (currExpression == "0") {
-            currExpression = E.toString()
-        }
-    }
-
     fun onOperator(operator: String) {
         if (currExpression == "Error") {
             currExpression = "0"
         }
 
         val lastChar = currExpression.lastOrNull()?.toString()
-        val isLastCharOperator = lastChar in BINARY_OPERATORS
+        val isLastCharOperator = lastChar in binaryOperation
 
         when (operator) {
-            in BINARY_OPERATORS -> {
+            in binaryOperation -> {
 
                 if (lastChar == "(") {
                     if (operator != "-") {
-                        return
-                    }
-                }
-
-                if (isLastCharOperator) {
-                    if (operator == "-" && lastChar != "-") {
-
-                    } else {
                         return
                     }
                 }
@@ -89,7 +59,6 @@ class Calc {
                         return
                     }
                 }
-
 
                 currExpression += operator
             }
@@ -113,12 +82,32 @@ class Calc {
         if (internalFunction == "!" || internalFunction == "%" || internalFunction == "1/x") {
             try {
                 val allTokens = tokenize(currExpression)
+                var operandString = ""
+                var operandStartIndex = -1
 
-                if (allTokens.isEmpty() || allTokens.last().toDoubleOrNull() == null) {
-                    throw IllegalArgumentException("Operand missing or not a single number.")
+                for (i in allTokens.indices.reversed()) {
+                    val token = allTokens[i]
+                    if (token.toDoubleOrNull() != null || token == ")") {
+                        if (currExpression.endsWith(token)) {
+                            operandString = token
+                            operandStartIndex = currExpression.length - operandString.length
+                        } else if (token == ")") {
+                            var parenCount = 0
+                            var lastTokenIndex = currExpression.length - 1
+                            while (lastTokenIndex >= 0) {
+                                if (currExpression[lastTokenIndex] == ')') parenCount++
+                                if (currExpression[lastTokenIndex] == '(') parenCount--
+                                if (parenCount == 0 && currExpression[lastTokenIndex] == '(') break
+                                lastTokenIndex--
+                            }
+                            if (lastTokenIndex >= 0) {
+                                operandString = currExpression.substring(lastTokenIndex)
+                                operandStartIndex = lastTokenIndex
+                            }
+                        }
+                        if (operandStartIndex != -1) break
+                    }
                 }
-
-                val operandString = allTokens.last()
 
                 val newPostfixNotation = when (internalFunction) {
                     "!" -> "$operandString!"
@@ -127,7 +116,7 @@ class Calc {
                     else -> ""
                 }
 
-                val newExpression = currExpression.dropLast(operandString.length) + newPostfixNotation
+                val newExpression = currExpression.dropLast(currExpression.length - operandStartIndex) + newPostfixNotation
 
                 currExpression = newExpression
 
@@ -138,12 +127,12 @@ class Calc {
         } else {
             val lastChar = currExpression.lastOrNull()?.toString()
 
-            if (currExpression != "0" && lastChar !in BINARY_OPERATORS ) {
+            if (currExpression != "0" && lastChar !in binaryOperation && lastChar != "(") {
                 currExpression += "x"
             }
 
             if (currExpression == "0") {
-                currExpression = "$function("
+                currExpression = "$function"
             } else {
                 currExpression += "$function("
             }
@@ -179,7 +168,19 @@ class Calc {
 
     fun onDelete() {
         if (currExpression.length > 1) {
-            currExpression = currExpression.dropLast(1)
+            val multiCharFunctions = (trigFunction + otherFunction).map { "$it(" }
+
+            var deleted = false
+            for (func in multiCharFunctions) {
+                if (currExpression.endsWith(func)) {
+                    currExpression = currExpression.dropLast(func.length)
+                    deleted = true
+                    break
+                }
+            }
+            if (!deleted) {
+                currExpression = currExpression.dropLast(1)
+            }
         } else {
             currExpression = "0"
         }
@@ -190,15 +191,12 @@ class Calc {
     }
 
     private fun isOperator(token: String): Boolean {
-        return token in BINARY_OPERATORS || token == "!" || token == "%" || token == "1/x"
+        return token in binaryOperation || token == "!" || token == "%" || token == "1/x"
     }
 
     private fun isFunction(token: String): Boolean {
-        return token in ALL_TRIG_FUNCTIONS || token in OTHER_FUNCTIONS
+        return token in trigFunction || token in otherFunction
     }
-
-
-
 
     private fun evaluateExpression(expression: String): Double {
         val tokens = tokenize(expression)
@@ -206,10 +204,11 @@ class Calc {
         return evaluateRPN(rpnTokens)
     }
 
-
     private fun tokenize(expression: String): List<String> {
         val tokens = mutableListOf<String>()
         var i = 0
+        val allFunctions = (trigFunction + otherFunction).sortedByDescending { it.length }
+
         while (i < expression.length) {
             val char = expression[i]
             when {
@@ -222,19 +221,27 @@ class Calc {
                     tokens.add(numberBuffer)
                 }
                 char.isLetter() -> {
-                    var functionBuffer = ""
-                    while (i < expression.length && expression[i].isLetter()) {
-                        functionBuffer += expression[i]
+                    var foundFunction = false
+                    for (func in allFunctions) {
+                        if (expression.substring(i).startsWith(func)) {
+                            tokens.add(func)
+                            i += func.length
+                            foundFunction = true
+                            break
+                        }
+                    }
+
+                    if (!foundFunction) {
+                        tokens.add(char.toString())
                         i++
                     }
-                    tokens.add(functionBuffer)
                 }
-                char == '-' && (i == 0 || expression[i - 1].toString() in (BINARY_OPERATORS + listOf("("))) -> {
+                char == '-' && (i == 0 || expression[i - 1].toString() in (binaryOperation + listOf("("))) -> {
 
                     val nextCharIndex = i + 1
                     var isNextCharFunction = false
 
-                    for (func in ALL_TRIG_FUNCTIONS + OTHER_FUNCTIONS) {
+                    for (func in trigFunction + otherFunction) {
                         if (expression.length > nextCharIndex && expression.substring(nextCharIndex).startsWith(func)) {
                             isNextCharFunction = true
                             break
@@ -269,7 +276,7 @@ class Calc {
                     tokens.add("%")
                     i++
                 }
-                char.toString() in (BINARY_OPERATORS + listOf("(", ")")) -> {
+                char.toString() in (binaryOperation + listOf("(", ")")) -> {
                     tokens.add(char.toString())
                     i++
                 }
@@ -278,7 +285,6 @@ class Calc {
         }
         return tokens.filter { it.isNotBlank() }
     }
-
 
     private fun shuntingYard(tokens: List<String>): List<String> {
         val outputQueue = mutableListOf<String>()
@@ -304,8 +310,6 @@ class Calc {
                         if (operatorStack.isNotEmpty() && isFunction(operatorStack.peek())) {
                             outputQueue.add(operatorStack.pop())
                         }
-                    } else {
-                        throw IllegalArgumentException("Mismatched parentheses")
                     }
                 }
                 isOperator(token) -> {
@@ -331,12 +335,10 @@ class Calc {
             }
         }
         while (operatorStack.isNotEmpty()) {
-            if (operatorStack.peek() in listOf("(", ")")) throw IllegalArgumentException("Mismatched parentheses")
             outputQueue.add(operatorStack.pop())
         }
         return outputQueue
     }
-
 
     private fun evaluateRPN(tokens: List<String>): Double {
         val stack = Stack<Double>()
@@ -346,19 +348,16 @@ class Calc {
                     stack.push(token.toDouble())
                 }
                 isFunction(token) -> {
-                    if (stack.isEmpty()) throw IllegalArgumentException("Invalid RPN expression: missing operand for $token")
                     val operand = stack.pop()
                     val result = performScientificCalculation(operand, token)
                     stack.push(result)
                 }
                 isOperator(token) -> {
                     if (token == "!" || token == "1/x" || token == "%") {
-                        if (stack.isEmpty()) throw IllegalArgumentException("Invalid RPN expression: missing operand for $token")
                         val operand = stack.pop()
                         val result = performScientificCalculation(operand, token)
                         stack.push(result)
                     } else {
-                        if (stack.size < 2) throw IllegalArgumentException("Invalid RPN expression: missing operand for $token")
                         val operand2 = stack.pop()
                         val operand1 = stack.pop()
                         val result = performCalculation(operand1, operand2, token)
@@ -370,7 +369,6 @@ class Calc {
         if (stack.size != 1) throw IllegalArgumentException("Invalid RPN expression")
         return stack.pop()
     }
-
 
     private fun getPrecedence(op: String): Int {
         return when {
@@ -386,8 +384,6 @@ class Calc {
     private fun Double.degToRadians(): Double = this * PI / 180
     private fun Double.radiansToDeg(): Double = this * 180 / PI
 
-
-
     private fun performCalculation(operand1: Double, operand2: Double, operator: String): Double {
         return when (operator) {
             "+" -> operand1 + operand2
@@ -399,20 +395,16 @@ class Calc {
         }
     }
 
-
     private fun performScientificCalculation(operand: Double, operator: String): Double {
         return when (operator) {
-            // Trigonometric
             "sin" -> sin(operand.degToRadians())
             "cos" -> cos(operand.degToRadians())
             "tan" -> tan(operand.degToRadians())
             "asin" -> asin(operand).radiansToDeg()
             "acos" -> acos(operand).radiansToDeg()
             "atan" -> atan(operand).radiansToDeg()
-            // Logarithmic
             "log" -> log10(operand)
             "ln" -> ln(operand)
-            // Other
             "sqrt" -> {
                 if (operand < 0) Double.NaN else sqrt(operand)
             }
@@ -422,7 +414,6 @@ class Calc {
             else -> Double.NaN
         }
     }
-
 
     private fun factorial(n: Double): Double {
         if (n < 0 || n != n.toInt().toDouble()) return Double.NaN
@@ -440,17 +431,36 @@ class Calc {
         return result
     }
 
-
     private fun formatNumber(number: Double?): String {
+        // 1. Error/Special Value Handling
         if (number == null || number.isNaN() || number.isInfinite()) return "Error"
 
-        // Tambahkan format untuk Infinity (yang datang dari faktorial > 170)
-        if (number.isInfinite()) return "Error"
+        val maxDisplayLength = 14
 
-        return if (number % 1 == 0.0 && number.toLong() in Long.MIN_VALUE..Long.MAX_VALUE) {
+        val formatted: String = if (number % 1 == 0.0) {
+
             number.toLong().toString()
         } else {
-            "%.10f".format(number).trimEnd('0').trimEnd('.')
+            "%.15f".format(number).trimEnd('0').trimEnd('.')
         }
+
+        if (formatted.length <= maxDisplayLength) {
+            return formatted
+        }
+
+        val ellipsis = "..."
+        val availableLength = maxDisplayLength - ellipsis.length
+
+        if (availableLength <= 0) {
+            return "." + ellipsis
+        }
+
+        var trimmed = formatted.substring(0, availableLength)
+
+        if (trimmed.endsWith('.') && trimmed.length > 1 && trimmed[0] == '-') {
+            trimmed = trimmed.dropLast(1)
+        }
+
+        return trimmed + ellipsis
     }
 }
