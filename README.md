@@ -2,11 +2,7 @@
 # ScientificApplication
 Name : Fadlintauzy Wilman Putra(1313623068)
 
-<<<<<<< HEAD
 For this assingment i use Gemini AI to help me build basic calculator and  with some error handling like trimming and unary minus.
-=======
-This is blank template with the exception of this readme. You are free to push anything to this repo that are related to the homework. 
->>>>>>> 48190cc40e6e9020d651ffa03179474ce24033e2
 
 For qualifying for a full grade you just need:
 - Fully working basic calculator: +, -, *, /
